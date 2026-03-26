@@ -58,13 +58,16 @@ class WordPressPublisher
     /**
      * Pubblica un articolo su WordPress.
      *
-     * @param string      $title        Titolo dell'articolo
-     * @param string      $htmlContent  Contenuto HTML completo
-     * @param string|null $imageUrl     URL immagine featured (opzionale)
-     * @param string|null $excerpt      Estratto/meta description (opzionale)
-     * @param string|null $status       Stato: 'publish', 'draft', 'pending' (opzionale, usa default)
-     * @param string|null $category     Nome categoria (opzionale, se null usa AI o default)
+     * @param string      $title          Titolo dell'articolo
+     * @param string      $htmlContent    Contenuto HTML completo
+     * @param string|null $imageUrl       URL immagine featured (opzionale)
+     * @param string|null $excerpt        Estratto/meta description (opzionale)
+     * @param string|null $status         Stato: 'publish', 'draft', 'pending' (opzionale, usa default)
+     * @param string|null $category       Nome categoria (opzionale, se null usa AI o default)
      * @param string|null $focusKeyphrase Keyword focus per Yoast SEO (opzionale)
+     * @param array       $tags           Tag WordPress (opzionale, es. ['seo', 'marketing'])
+     * @param string|null $seoTitle       Titolo SEO per Yoast (opzionale, diverso dal titolo post)
+     * @param string|null $schemaMarkup   JSON-LD da appendere al contenuto (opzionale)
      * @return array|null ['post_id' => int, 'post_url' => string] oppure null se fallisce
      */
     public function publish(
@@ -74,7 +77,10 @@ class WordPressPublisher
         ?string $excerpt = null,
         ?string $status = null,
         ?string $category = null,
-        ?string $focusKeyphrase = null
+        ?string $focusKeyphrase = null,
+        array $tags = [],
+        ?string $seoTitle = null,
+        ?string $schemaMarkup = null
     ): ?array {
         if (!$this->isEnabled()) {
             $this->log('Pubblicazione non abilitata o credenziali mancanti', 'warning');
@@ -83,6 +89,11 @@ class WordPressPublisher
 
         $postStatus = $status ?? $this->defaultStatus;
         $this->log("Pubblicazione articolo: \"{$title}\" (stato: {$postStatus})", 'detail');
+
+        // Appendi schema markup JSON-LD al contenuto se presente
+        if (!empty($schemaMarkup)) {
+            $htmlContent .= "\n" . $schemaMarkup;
+        }
 
         // 1. Se c'e' un'immagine, caricala prima come media
         $featuredMediaId = null;
@@ -118,16 +129,28 @@ class WordPressPublisher
         if (!empty($focusKeyphrase)) {
             $yoastMeta['_yoast_wpseo_focuskw'] = $focusKeyphrase;
         }
+        if (!empty($seoTitle)) {
+            $yoastMeta['_yoast_wpseo_title'] = $seoTitle;
+        }
         if (!empty($yoastMeta)) {
             $postData['meta'] = $yoastMeta;
         }
 
         // Yoast REST API: aggiungi anche nel formato nativo Yoast
-        if (!empty($excerpt) || !empty($focusKeyphrase)) {
+        if (!empty($excerpt) || !empty($focusKeyphrase) || !empty($seoTitle)) {
             $postData['yoast_head_json'] = null; // trigger Yoast per ricalcolare
         }
 
-        // 3. Assegna categoria (da parametro, oppure da default configurato)
+        // 3. Assegna tag WordPress
+        if (!empty($tags)) {
+            $tagIds = $this->resolveTagIds($tags);
+            if (!empty($tagIds)) {
+                $postData['tags'] = $tagIds;
+                $this->log('Tag assegnati: ' . implode(', ', $tags), 'detail');
+            }
+        }
+
+        // 5. Assegna categoria (da parametro, oppure da default configurato)
         $categoryName = $category ?? $this->defaultCategory;
         $categoryId = $this->resolveCategoryByName($categoryName);
         if ($categoryId !== null) {
@@ -135,7 +158,7 @@ class WordPressPublisher
             $this->log("Categoria assegnata: \"{$categoryName}\" (ID: {$categoryId})", 'detail');
         }
 
-        // 4. Crea il post
+        // 6. Crea il post
         $url = $this->siteUrl . '/wp-json/wp/v2/posts';
         $response = $this->apiRequest('POST', $url, $postData);
 
@@ -152,9 +175,9 @@ class WordPressPublisher
             return null;
         }
 
-        // 5. Aggiorna meta Yoast SEO con chiamata dedicata (fallback affidabile)
+        // 7. Aggiorna meta Yoast SEO con chiamata dedicata (fallback affidabile)
         if (!empty($yoastMeta)) {
-            $this->updateYoastMeta($postId, $excerpt, $focusKeyphrase);
+            $this->updateYoastMeta($postId, $excerpt, $focusKeyphrase, $seoTitle);
         }
 
         $this->log("Post creato con successo! ID: {$postId} | URL: {$postUrl}", 'success');
@@ -593,9 +616,9 @@ class WordPressPublisher
      * 2. WordPress REST API meta fields (PUT /wp/v2/posts/{id})
      * 3. ACF/Custom fields endpoint
      */
-    private function updateYoastMeta(int $postId, ?string $metaDescription = null, ?string $focusKeyphrase = null): void
+    private function updateYoastMeta(int $postId, ?string $metaDescription = null, ?string $focusKeyphrase = null, ?string $seoTitle = null): void
     {
-        if (empty($metaDescription) && empty($focusKeyphrase)) {
+        if (empty($metaDescription) && empty($focusKeyphrase) && empty($seoTitle)) {
             return;
         }
 
@@ -607,6 +630,9 @@ class WordPressPublisher
         }
         if (!empty($focusKeyphrase)) {
             $yoastData['wpseo_focuskw'] = $focusKeyphrase;
+        }
+        if (!empty($seoTitle)) {
+            $yoastData['wpseo_title'] = $seoTitle;
         }
 
         // Prova l'endpoint Yoast dedicato per i meta
@@ -628,6 +654,9 @@ class WordPressPublisher
         if (!empty($focusKeyphrase)) {
             $metaFields['_yoast_wpseo_focuskw'] = $focusKeyphrase;
         }
+        if (!empty($seoTitle)) {
+            $metaFields['_yoast_wpseo_title'] = $seoTitle;
+        }
 
         $wpUrl = $this->siteUrl . '/wp-json/wp/v2/posts/' . $postId;
         $wpResponse = $this->apiRequest('PUT', $wpUrl, ['meta' => $metaFields]);
@@ -637,8 +666,9 @@ class WordPressPublisher
             $savedMeta = $wpResponse['meta'] ?? [];
             $metaDescSaved = empty($metaDescription) || ($savedMeta['_yoast_wpseo_metadesc'] ?? '') === $metaDescription;
             $focusKwSaved = empty($focusKeyphrase) || ($savedMeta['_yoast_wpseo_focuskw'] ?? '') === $focusKeyphrase;
+            $seoTitleSaved = empty($seoTitle) || ($savedMeta['_yoast_wpseo_title'] ?? '') === $seoTitle;
 
-            if ($metaDescSaved && $focusKwSaved) {
+            if ($metaDescSaved && $focusKwSaved && $seoTitleSaved) {
                 $this->log("Yoast SEO meta aggiornati per post #{$postId}", 'success');
                 return;
             }
@@ -652,6 +682,42 @@ class WordPressPublisher
         } else {
             $this->log("Impossibile aggiornare meta Yoast per post #{$postId} - verificare che Yoast SEO sia attivo e che l'utente abbia permessi di editare i meta", 'warning');
         }
+    }
+
+    /**
+     * Risolve nomi tag in ID WordPress, creando i tag mancanti.
+     * @param string[] $tagNames
+     * @return int[]
+     */
+    private function resolveTagIds(array $tagNames): array
+    {
+        $ids = [];
+        foreach ($tagNames as $name) {
+            $name = trim($name);
+            if (empty($name)) {
+                continue;
+            }
+
+            $url = $this->siteUrl . '/wp-json/wp/v2/tags?search=' . urlencode($name);
+            $response = $this->apiRequest('GET', $url);
+
+            if (!empty($response) && is_array($response)) {
+                foreach ($response as $tag) {
+                    if (isset($tag['id']) && mb_strtolower(html_entity_decode($tag['name'])) === mb_strtolower($name)) {
+                        $ids[] = (int) $tag['id'];
+                        continue 2;
+                    }
+                }
+            }
+
+            // Tag non trovato: crealo
+            $created = $this->apiRequest('POST', $this->siteUrl . '/wp-json/wp/v2/tags', ['name' => $name]);
+            if (!empty($created['id'])) {
+                $ids[] = (int) $created['id'];
+            }
+        }
+
+        return $ids;
     }
 
     private function slugify(string $text): string

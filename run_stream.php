@@ -389,7 +389,10 @@ try {
                     $metaDescription,
                     null,
                     $wpCategoryName,
-                    $topic
+                    $topic,
+                    $articolo['tags'] ?? [],
+                    $articolo['seo_title'] ?? null,
+                    $articolo['schema_markup'] ?? null
                 );
                 if ($wpResult !== null) {
                     $wpPostUrl = $wpResult['post_url'];

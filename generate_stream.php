@@ -234,7 +234,11 @@ try {
             $featuredImage['url'] ?? null,
             $metaDescription,
             null,
-            $wpCategoryName
+            $wpCategoryName,
+            $keyword,
+            $articolo['tags'] ?? [],
+            $articolo['seo_title'] ?? null,
+            $articolo['schema_markup'] ?? null
         );
         
         if ($wpResult !== null) {

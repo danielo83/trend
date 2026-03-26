@@ -398,7 +398,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     $featuredImage['url'] ?? null,
                                     $metaDescription,
                                     null,
-                                    $wpCategoryName
+                                    $wpCategoryName,
+                                    $topic,
+                                    $articolo['tags'] ?? [],
+                                    $articolo['seo_title'] ?? null,
+                                    $articolo['schema_markup'] ?? null
                                 );
                                 if ($wpResult !== null) {
                                     $wpPostUrl = $wpResult['post_url'];
@@ -615,7 +619,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $item['image'] ?? null,
             $metaDescription,
             null,
-            $wpCategoryName
+            $wpCategoryName,
+            $item['keyword'] ?? $item['title'],
+            $item['tags'] ?? [],
+            $item['seo_title'] ?? null,
+            $item['schema_markup'] ?? null
         );
 
         if ($result !== null) {
