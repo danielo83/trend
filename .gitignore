@@ -5,3 +5,4 @@ data/cache_*.json
 data/images/
 logs/
 error_log
+.vscode/sftp.json
