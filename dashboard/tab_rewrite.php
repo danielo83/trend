@@ -125,6 +125,21 @@
         </div>
     <?php else: ?>
 
+    <!-- Banner errori da factcheck (popolato da JS via localStorage) -->
+    <div id="rwFcErrorBanner" style="display:none;" class="card" style="padding:16px;border-color:#b45309;background:#1c1408;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+            <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <span style="font-size:18px;">⚠</span>
+                    <strong style="color:#fbbf24;font-size:14px;">Errori da correggere in: <span id="rwFcArticleTitle" style="font-style:italic;"></span></strong>
+                </div>
+                <p style="color:#94a3b8;font-size:12px;margin:0 0 8px;">Il fact-check ha rilevato questi problemi. Assicurati di correggerli durante la riscrittura:</p>
+                <ul id="rwFcErrorList" style="margin:0;padding-left:0;list-style:none;"></ul>
+            </div>
+            <button type="button" onclick="rwDismissFcBanner()" style="background:none;border:none;cursor:pointer;color:#64748b;font-size:18px;line-height:1;padding:0;flex-shrink:0;">×</button>
+        </div>
+    </div>
+
     <!-- Filtri e ricerca -->
     <div class="card" style="padding:16px;">
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">

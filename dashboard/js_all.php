@@ -1170,6 +1170,44 @@ function fcResetAllBtns() {
     fcActiveIds = [];
 }
 
+function fcGoToRewrite(postId, title, issues) {
+    if (issues && issues.length > 0) {
+        try {
+            localStorage.setItem('fc_rewrite_issues', JSON.stringify({ postId: postId, title: title, issues: issues }));
+        } catch(e) {}
+    }
+    window.location.href = '?tab=rewrite&rwsearch=' + encodeURIComponent(title);
+}
+
+function rwInitFcBanner() {
+    try {
+        var stored = localStorage.getItem('fc_rewrite_issues');
+        if (!stored) return;
+        var data = JSON.parse(stored);
+        if (!data || !data.issues || data.issues.length === 0) return;
+        var banner = document.getElementById('rwFcErrorBanner');
+        var titleEl = document.getElementById('rwFcArticleTitle');
+        var listEl = document.getElementById('rwFcErrorList');
+        if (!banner || !listEl) return;
+        if (titleEl) titleEl.textContent = data.title || '';
+        listEl.innerHTML = '';
+        data.issues.forEach(function(issue) {
+            var li = document.createElement('li');
+            li.style.cssText = 'margin-bottom:6px;display:flex;align-items:flex-start;gap:6px;color:#fca5a5;font-size:13px;';
+            li.innerHTML = '<span style="flex-shrink:0;color:#f59e0b;">•</span><span>' + issue.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>';
+            listEl.appendChild(li);
+        });
+        banner.style.display = '';
+        banner.style.cssText = 'padding:16px;border-left:3px solid #b45309;background:#1c1408;border-radius:8px;margin-bottom:16px;';
+    } catch(e) {}
+}
+
+function rwDismissFcBanner() {
+    try { localStorage.removeItem('fc_rewrite_issues'); } catch(e) {}
+    var banner = document.getElementById('rwFcErrorBanner');
+    if (banner) banner.style.display = 'none';
+}
+
 function fcResetLog() {
     if (!confirm('Resettare il log dei fact-check? I post potranno essere riverificati.')) return;
     fetch('dashboard.php?tab=factcheck&action=reset_factcheck_log&csrf_token=<?= $csrfToken ?>')
@@ -1210,6 +1248,13 @@ document.addEventListener('keydown', function(e) {
         </div>
     </div>
 </div>
+
+// Inizializza banner errori factcheck nel tab rewrite
+(function() {
+    if (document.getElementById('rwFcErrorBanner')) {
+        rwInitFcBanner();
+    }
+})();
 
 </body>
 </html>

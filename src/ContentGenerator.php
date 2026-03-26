@@ -1584,14 +1584,27 @@ PROMPT;
      * @return array|null ['score'=>int, 'issues'=>string[], 'summary'=>string, 'provider'=>string, 'time_ms'=>int]
      *                    oppure null se tutte le API falliscono
      */
-    public function factCheck(string $title, string $body, string $topic): ?array
+    public function factCheck(string $title, string $body, string $topic, array $knownIssues = []): ?array
     {
-        $bodyText = $this->truncate(strip_tags($body), 3000);
+        $nicheName = $this->config['niche_name'] ?? 'vari argomenti';
+        $nicheDesc = $this->config['niche_description'] ?? '';
+
+        $bodyText = $this->truncate(strip_tags($body), 6000);
+
+        $knownIssuesBlock = '';
+        if (!empty($knownIssues)) {
+            $knownIssuesBlock = "\n\nATTENZIONE - Errori già riscontrati frequentemente in articoli precedenti su questo sito:\n";
+            foreach ($knownIssues as $ki) {
+                $knownIssuesBlock .= "- {$ki}\n";
+            }
+            $knownIssuesBlock .= "Controlla con particolare attenzione se anche questo articolo incorre negli stessi errori.\n";
+        }
 
         $prompt = <<<PROMPT
-Sei un fact-checker specializzato in contenuti italiani sui temi: sogni, sonno, Smorfia napoletana, santi e tradizioni popolari.
+Sei un fact-checker specializzato in contenuti italiani sul tema: {$nicheName}.
+{$nicheDesc}
 
-Analizza il seguente articolo e identifica eventuali problemi di accuratezza.
+Analizza il seguente articolo e identifica eventuali problemi di accuratezza.{$knownIssuesBlock}
 
 Titolo: "{$title}"
 Topic: "{$topic}"
@@ -1599,15 +1612,14 @@ Topic: "{$topic}"
 Testo dell'articolo (estratto):
 {$bodyText}
 
-Cerca specificamente:
-1. Citazioni testuali inventate attribuite a Freud, Jung o altri autori (es. "Freud scrisse in [opera inventata]...")
-2. Titoli di libri, articoli o opere inventate
-3. Statistiche o percentuali inventate (es. "il 73% delle persone sogna...")
-4. Date o eventi storici palesemente errati o inventati
-5. Numeri della Smorfia presentati come certi ma probabilmente inventati
-6. Informazioni biografiche su santi minori che sembrano inventate
-7. Studi scientifici inventati o attribuiti a istituzioni inesistenti
-8. Affermazioni specifiche presentate come fatti certi su temi incerti
+Cerca specificamente questi tipi di problemi (usa esattamente questi tag tipo):
+- "citazione_falsa": citazioni testuali inventate attribuite a esperti, autori, scienziati (es. "secondo il Prof. X..." senza fonte)
+- "opera_inventata": titoli di libri, articoli, studi, riviste scientifiche inventate o non verificabili
+- "statistica_inventata": percentuali, numeri, statistiche presentate come certi senza fonte (es. "il 73% delle persone...")
+- "dato_storico_errato": date, eventi storici o biografici palesemente errati o inventati
+- "studio_inventato": studi scientifici attribuiti a istituzioni o università inesistenti o non verificabili
+- "fatto_non_verificabile": affermazioni specifiche presentate come fatti certi su temi incerti o controversi
+- "altro": qualsiasi altro problema di accuratezza non classificabile sopra
 
 Assegna uno score da 1 a 10:
 - 10: nessun problema, tutto verificabile o presentato con appropriata incertezza
@@ -1616,14 +1628,20 @@ Assegna uno score da 1 a 10:
 - 1-4: molte informazioni inventate o false
 
 Rispondi SOLO con un JSON valido (niente testo prima o dopo):
-{"score": N, "issues": ["descrizione problema 1", "descrizione problema 2"], "summary": "valutazione breve in italiano"}
+{
+  "score": N,
+  "issues": [
+    {"text": "descrizione dettagliata del problema", "type": "tipo_dal_lista_sopra"}
+  ],
+  "summary": "valutazione breve in italiano (max 2 frasi)"
+}
 
 Se non ci sono problemi: {"score": 10, "issues": [], "summary": "Nessun problema rilevato."}
 PROMPT;
 
         foreach ($this->getProviderOrder() as $provider) {
             $startTime = microtime(true);
-            $response = $this->callProviderRaw($provider, $prompt, 800);
+            $response = $this->callProviderRaw($provider, $prompt, 1200);
             $timeMs = round((microtime(true) - $startTime) * 1000);
 
             if ($response !== null) {
@@ -1633,12 +1651,26 @@ PROMPT;
                 $data = json_decode($response, true);
 
                 if (isset($data['score'])) {
+                    // Normalizza issues: supporta sia [{text, type}] che ["stringa"]
+                    $issuesRaw = (array)($data['issues'] ?? []);
+                    $issueTexts = [];
+                    $issueTypes = [];
+                    foreach ($issuesRaw as $iss) {
+                        if (is_array($iss) && isset($iss['text'])) {
+                            $issueTexts[] = $iss['text'];
+                            $issueTypes[] = $iss['type'] ?? 'altro';
+                        } elseif (is_string($iss) && $iss !== '') {
+                            $issueTexts[] = $iss;
+                            $issueTypes[] = 'altro';
+                        }
+                    }
                     return [
-                        'score'    => max(1, min(10, intval($data['score']))),
-                        'issues'   => array_values(array_filter((array)($data['issues'] ?? []), 'is_string')),
-                        'summary'  => $data['summary'] ?? '',
-                        'provider' => $provider,
-                        'time_ms'  => $timeMs,
+                        'score'       => max(1, min(10, intval($data['score']))),
+                        'issues'      => $issueTexts,
+                        'issue_types' => $issueTypes,
+                        'summary'     => $data['summary'] ?? '',
+                        'provider'    => $provider,
+                        'time_ms'     => $timeMs,
                     ];
                 }
             }

@@ -151,6 +151,7 @@ try {
             title TEXT,
             score INTEGER,
             issues TEXT,
+            issue_types TEXT,
             summary TEXT,
             status TEXT NOT NULL DEFAULT 'completed',
             checked_at TEXT NOT NULL,
@@ -159,6 +160,8 @@ try {
         )
     ");
     $db->exec('CREATE INDEX IF NOT EXISTS idx_factcheck_post_id ON factcheck_log(post_id)');
+    // Aggiungi colonna issue_types se non esiste (migration)
+    try { $db->exec('ALTER TABLE factcheck_log ADD COLUMN issue_types TEXT'); } catch (Throwable $e) {}
 
     // WordPress
     $wpPublisher = new WordPressPublisher($config);
@@ -187,6 +190,42 @@ try {
 
     $postsToCheck = $allPosts;
 
+    // Recupera i tipi di errori più frequenti dalla history per arricchire il prompt
+    $knownIssues = [];
+    try {
+        $histStmt = $db->query("SELECT issues, issue_types FROM factcheck_log WHERE status = 'issues_found' ORDER BY checked_at DESC LIMIT 50");
+        $issueFreq = [];
+        while ($hRow = $histStmt->fetch(PDO::FETCH_ASSOC)) {
+            $histIssues = json_decode($hRow['issues'] ?? '[]', true) ?: [];
+            $histTypes  = json_decode($hRow['issue_types'] ?? '[]', true) ?: [];
+            foreach ($histIssues as $idx => $issText) {
+                $itype = $histTypes[$idx] ?? 'altro';
+                if ($itype !== 'altro') {
+                    $issueFreq[$itype] = ($issueFreq[$itype] ?? 0) + 1;
+                }
+            }
+        }
+        arsort($issueFreq);
+        $typeLabels = [
+            'citazione_falsa'    => 'citazioni testuali inventate attribuite a esperti',
+            'opera_inventata'    => 'titoli di libri o studi inventati',
+            'statistica_inventata' => 'statistiche e percentuali senza fonte',
+            'dato_storico_errato'  => 'dati storici errati o imprecisi',
+            'studio_inventato'     => 'studi scientifici non verificabili',
+            'fatto_non_verificabile' => 'fatti presentati come certi ma non verificabili',
+        ];
+        foreach (array_slice(array_keys($issueFreq), 0, 4) as $type) {
+            if (isset($typeLabels[$type])) {
+                $knownIssues[] = $typeLabels[$type] . ' (trovato ' . $issueFreq[$type] . ' volte in precedenza)';
+            }
+        }
+        if (!empty($knownIssues)) {
+            logEvent('Errori ricorrenti rilevati dalla history: ' . implode(', ', array_keys(array_slice($issueFreq, 0, 4, true))), 'detail');
+        }
+    } catch (Throwable $e) {
+        // ignora errori nella lettura della history
+    }
+
     if ($paramLimit > 0) {
         $postsToCheck = array_slice($postsToCheck, 0, $paramLimit);
         logEvent("Limit: max {$paramLimit} post", 'detail');
@@ -200,8 +239,8 @@ try {
     logEvent("Post in coda: {$total}", 'success');
 
     $stmtInsert = $db->prepare('
-        INSERT INTO factcheck_log (post_id, title, score, issues, summary, status, checked_at, provider, time_ms)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO factcheck_log (post_id, title, score, issues, issue_types, summary, status, checked_at, provider, time_ms)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
 
     sectionEvent("Fact-check di {$total} post");
@@ -219,7 +258,7 @@ try {
         }
 
         $slug   = !empty($post['slug']) ? str_replace('-', ' ', $post['slug']) : $ptitle;
-        $result = $generator->factCheck($ptitle, $post['content'], $slug);
+        $result = $generator->factCheck($ptitle, $post['content'], $slug, $knownIssues);
 
         if ($result === null) {
             logEvent("ERRORE: fact-check fallito per post ID {$pid}", 'error');
@@ -250,6 +289,7 @@ try {
         $stmtInsert->execute([
             $pid, $ptitle, $score,
             json_encode($issuesList, JSON_UNESCAPED_UNICODE),
+            json_encode($result['issue_types'] ?? [], JSON_UNESCAPED_UNICODE),
             $summary, $status,
             date('Y-m-d H:i:s'), $provider, $timeMs,
         ]);

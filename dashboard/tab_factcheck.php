@@ -109,6 +109,47 @@
         </div>
     </div>
 
+    <?php
+    // Calcola errori ricorrenti dalla history
+    $fcIssueTypeStats = [];
+    try {
+        $fcTypeStmt = $fcDb->query("SELECT issue_types FROM factcheck_log WHERE status = 'issues_found' AND issue_types IS NOT NULL AND issue_types != '' AND issue_types != '[]'");
+        while ($typeRow = $fcTypeStmt->fetch(PDO::FETCH_ASSOC)) {
+            $types = json_decode($typeRow['issue_types'] ?? '[]', true) ?: [];
+            foreach ($types as $t) {
+                if ($t) $fcIssueTypeStats[$t] = ($fcIssueTypeStats[$t] ?? 0) + 1;
+            }
+        }
+        arsort($fcIssueTypeStats);
+    } catch (Throwable $e) {}
+
+    $fcTypeLabels = [
+        'citazione_falsa'      => ['label' => 'Citazioni false', 'color' => '#fca5a5', 'bg' => '#7f1d1d'],
+        'opera_inventata'      => ['label' => 'Opere inventate', 'color' => '#fdba74', 'bg' => '#7c2d12'],
+        'statistica_inventata' => ['label' => 'Statistiche inventate', 'color' => '#fbbf24', 'bg' => '#78350f'],
+        'dato_storico_errato'  => ['label' => 'Dati storici errati', 'color' => '#a78bfa', 'bg' => '#4c1d95'],
+        'studio_inventato'     => ['label' => 'Studi inventati', 'color' => '#f9a8d4', 'bg' => '#831843'],
+        'fatto_non_verificabile' => ['label' => 'Fatti non verificabili', 'color' => '#6ee7b7', 'bg' => '#064e3b'],
+        'altro'                => ['label' => 'Altro', 'color' => '#94a3b8', 'bg' => '#1e293b'],
+    ];
+    ?>
+    <?php if (!empty($fcIssueTypeStats)): ?>
+    <div class="card" style="padding:16px;">
+        <h3 style="margin:0 0 12px;font-size:14px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Errori ricorrenti rilevati</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <?php foreach ($fcIssueTypeStats as $type => $count):
+                $typeInfo = $fcTypeLabels[$type] ?? ['label' => $type, 'color' => '#94a3b8', 'bg' => '#1e293b'];
+            ?>
+                <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:<?= $typeInfo['bg'] ?>;border:1px solid <?= $typeInfo['color'] ?>20;">
+                    <span style="color:<?= $typeInfo['color'] ?>;font-size:13px;font-weight:500;"><?= htmlspecialchars($typeInfo['label']) ?></span>
+                    <span style="background:<?= $typeInfo['color'] ?>33;color:<?= $typeInfo['color'] ?>;font-size:11px;font-weight:700;padding:1px 6px;border-radius:10px;"><?= $count ?>×</span>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <p style="margin:10px 0 0;color:#475569;font-size:12px;">Questi tipi di errori sono stati trovati negli articoli verificati. Il sistema li segnala con maggiore attenzione nei nuovi check.</p>
+    </div>
+    <?php endif; ?>
+
     <?php if (empty($fcAllPosts)): ?>
         <div class="card">
             <p style="color:#fbbf24;">Nessun articolo in cache. Aggiorna la cache dal tab Riscrittura.</p>
@@ -179,6 +220,7 @@
                 $fcStatus  = $fcInfo['status'] ?? 'pending';
                 $fcScore   = $fcInfo['score'] ?? null;
                 $fcIssues  = $fcInfo ? json_decode($fcInfo['issues'] ?? '[]', true) : [];
+                $fcIssueTypes = $fcInfo ? json_decode($fcInfo['issue_types'] ?? '[]', true) : [];
                 $fcSummary = $fcInfo['summary'] ?? '';
 
                 $postCatNames = [];
@@ -210,9 +252,19 @@
                             <?php endif; ?>
                             <?php if (!empty($fcIssues)): ?>
                                 <div id="fc-issues-<?= $postId ?>" style="margin-bottom:8px;">
-                                    <ul style="margin:0;padding-left:18px;color:#fca5a5;font-size:12px;">
-                                        <?php foreach ($fcIssues as $issue): ?>
-                                            <li style="margin-bottom:2px;"><?= htmlspecialchars($issue) ?></li>
+                                    <ul style="margin:0;padding-left:0;list-style:none;color:#fca5a5;font-size:12px;">
+                                        <?php foreach ($fcIssues as $idx => $issue):
+                                            $itype = $fcIssueTypes[$idx] ?? '';
+                                            $typeInfo = $fcTypeLabels[$itype] ?? null;
+                                        ?>
+                                            <li style="margin-bottom:4px;display:flex;align-items:flex-start;gap:6px;">
+                                                <?php if ($typeInfo): ?>
+                                                    <span style="flex-shrink:0;font-size:10px;padding:1px 5px;border-radius:3px;background:<?= $typeInfo['bg'] ?>;color:<?= $typeInfo['color'] ?>;margin-top:1px;"><?= htmlspecialchars($typeInfo['label']) ?></span>
+                                                <?php else: ?>
+                                                    <span style="flex-shrink:0;color:#ef4444;">⚠</span>
+                                                <?php endif; ?>
+                                                <span><?= htmlspecialchars($issue) ?></span>
+                                            </li>
                                         <?php endforeach; ?>
                                     </ul>
                                 </div>
@@ -220,7 +272,7 @@
                             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                                 <button type="button" class="btn btn-primary btn-sm" id="fc-btn-<?= $postId ?>" onclick="fcCheckSingle(<?= $postId ?>, this)">Verifica</button>
                                 <?php if ($fcStatus === 'issues_found'): ?>
-                                    <a href="?tab=rewrite&rwsearch=<?= urlencode($postTitle) ?>" style="font-size:12px;color:#fbbf24;text-decoration:underline;">Riscrivi per correggere →</a>
+                                    <button type="button" onclick="fcGoToRewrite(<?= $postId ?>, <?= htmlspecialchars(json_encode($postTitle), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($fcIssues), ENT_QUOTES) ?>)" style="background:none;border:none;cursor:pointer;font-size:12px;color:#fbbf24;text-decoration:underline;padding:0;">Riscrivi per correggere →</button>
                                 <?php endif; ?>
                                 <?php if (!empty($postUrl)): ?>
                                     <a href="<?= htmlspecialchars($postUrl) ?>" target="_blank" style="color:#818cf8;font-size:12px;text-decoration:underline;">Vedi articolo</a>
