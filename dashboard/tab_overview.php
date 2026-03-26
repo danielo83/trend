@@ -100,7 +100,7 @@
     <div class="card">
         <h3>🔍 SEO & GEO Scores - Ultimi Articoli</h3>
         <?php
-        require_once __DIR__ . '/src/SEOOptimizer.php';
+        require_once __DIR__ . '/../src/SEOOptimizer.php';
         $optimizer = new SEOOptimizer();
         $recentItems = array_slice($feedItems, 0, 5);
         ?>

@@ -476,8 +476,8 @@
                 </div>
                 <div class="form-group">
                     <?php
-                    require_once __DIR__ . '/src/LinkBuilder.php';
-                    require_once __DIR__ . '/src/SmartLinkBuilder.php';
+                    require_once __DIR__ . '/../src/LinkBuilder.php';
+                    require_once __DIR__ . '/../src/SmartLinkBuilder.php';
                     $lbInfo = (new SmartLinkBuilder($config))->getCacheInfo();
                     ?>
                     <label>Stato cache</label>

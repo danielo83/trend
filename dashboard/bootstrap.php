@@ -7,7 +7,7 @@
 
 session_start();
 
-$config = require __DIR__ . '/config.php';
+$config = require __DIR__ . '/../config.php';
 
 // --- Protezione con password ---
 $dashboardHash = EnvLoader::get('DASHBOARD_PASSWORD');
@@ -89,13 +89,13 @@ if (empty($_SESSION['dashboard_auth'])) {
     exit;
 }
 
-require __DIR__ . '/src/AutocompleteFetcher.php';
-require __DIR__ . '/src/TopicFilter.php';
-require __DIR__ . '/src/ContentGenerator.php';
-require __DIR__ . '/src/SocialFeedBuilder.php';
-require __DIR__ . '/src/ImageGenerator.php';
-require __DIR__ . '/src/RSSFeedBuilder.php';
-require __DIR__ . '/src/WordPressPublisher.php';
+require __DIR__ . '/../src/AutocompleteFetcher.php';
+require __DIR__ . '/../src/TopicFilter.php';
+require __DIR__ . '/../src/ContentGenerator.php';
+require __DIR__ . '/../src/SocialFeedBuilder.php';
+require __DIR__ . '/../src/ImageGenerator.php';
+require __DIR__ . '/../src/RSSFeedBuilder.php';
+require __DIR__ . '/../src/WordPressPublisher.php';
 
 // Helper: maschera una chiave API mostrando solo gli ultimi 4 caratteri
 function maskKey(string $key): string
@@ -110,7 +110,7 @@ function maskKey(string $key): string
 if (isset($_GET['action']) && $_GET['action'] === 'reset_factcheck_log') {
     $postedCsrf = $_GET['csrf_token'] ?? '';
     if (hash_equals($csrfToken, $postedCsrf)) {
-        $fcDbPath = $config['db_path'] ?? __DIR__ . '/data/history.sqlite';
+        $fcDbPath = $config['db_path'] ?? __DIR__ . '/../data/history.sqlite';
         $fcDb = new PDO('sqlite:' . $fcDbPath);
         $fcDb->exec("DELETE FROM factcheck_log");
         echo 'OK';
@@ -124,7 +124,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'reset_factcheck_log') {
 if (isset($_GET['action']) && $_GET['action'] === 'reset_rewrite_log') {
     $postedCsrf = $_GET['csrf_token'] ?? '';
     if (hash_equals($csrfToken, $postedCsrf)) {
-        $rwDbPath = $config['db_path'] ?? __DIR__ . '/data/history.sqlite';
+        $rwDbPath = $config['db_path'] ?? __DIR__ . '/../data/history.sqlite';
         $rwDb = new PDO('sqlite:' . $rwDbPath);
         $rwDb->exec('DELETE FROM rewrite_log');
         echo 'OK';
@@ -137,8 +137,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'reset_rewrite_log') {
 if (isset($_GET['action']) && $_GET['action'] === 'refresh_rw_cache') {
     $postedCsrf = $_GET['csrf_token'] ?? '';
     if (hash_equals($csrfToken, $postedCsrf)) {
-        require_once __DIR__ . '/src/LinkBuilder.php';
-        require_once __DIR__ . '/src/SmartLinkBuilder.php';
+        require_once __DIR__ . '/../src/LinkBuilder.php';
+        require_once __DIR__ . '/../src/SmartLinkBuilder.php';
         $lb = new SmartLinkBuilder($config);
         $lb->refreshCache();
         echo 'OK';
@@ -196,7 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Salva configurazione non sensibile in un file JSON separato
-        $settingsPath = __DIR__ . '/data/settings.json';
+        $settingsPath = __DIR__ . '/../data/settings.json';
         $settings = file_exists($settingsPath) ? json_decode(file_get_contents($settingsPath), true) : [];
 
         $settings['niche_name'] = trim($_POST['niche_name'] ?? 'Sogni e Dormire');
@@ -284,8 +284,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $urlUpdateMessages = [];
         if (!empty($oldSocialSiteUrl) && !empty($newSocialSiteUrl) && $oldSocialSiteUrl !== $newSocialSiteUrl) {
             try {
-                require __DIR__ . '/src/SocialFeedBuilder.php';
-                require __DIR__ . '/src/RSSFeedBuilder.php';
+                require __DIR__ . '/../src/SocialFeedBuilder.php';
+                require __DIR__ . '/../src/RSSFeedBuilder.php';
                 
                 // Crea config temporaneo con il nuovo URL
                 $updatedConfig = array_merge($config, ['social_site_url' => $newSocialSiteUrl]);
@@ -314,7 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $messageType = 'success';
 
         // Ricarica config
-        $config = require __DIR__ . '/config.php';
+        $config = require __DIR__ . '/../config.php';
 
         // Sovrascrivi con settings salvati
         $config = array_merge($config, $settings);
@@ -578,8 +578,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Applica link building al contenuto prima della pubblicazione (se abilitato)
         $publishContent = $item['content'];
-        require_once __DIR__ . '/src/LinkBuilder.php';
-        require_once __DIR__ . '/src/SmartLinkBuilder.php';
+        require_once __DIR__ . '/../src/LinkBuilder.php';
+        require_once __DIR__ . '/../src/SmartLinkBuilder.php';
         $lb = new SmartLinkBuilder($config);
         if ($lb->isEnabled()) {
             $topic = strip_tags(html_entity_decode($item['title'], ENT_QUOTES, 'UTF-8'));
@@ -645,8 +645,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'refresh_link_cache') {
         header('Content-Type: application/json; charset=utf-8');
-        require_once __DIR__ . '/src/LinkBuilder.php';
-        require_once __DIR__ . '/src/SmartLinkBuilder.php';
+        require_once __DIR__ . '/../src/LinkBuilder.php';
+        require_once __DIR__ . '/../src/SmartLinkBuilder.php';
         $lb = new SmartLinkBuilder($config);
         if (!$lb->isEnabled()) {
             echo json_encode(['success' => false, 'message' => 'Link Building non abilitato o WordPress non configurato.']);
@@ -705,8 +705,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'relink_wp_article') {
         header('Content-Type: application/json; charset=utf-8');
-        require_once __DIR__ . '/src/LinkBuilder.php';
-        require_once __DIR__ . '/src/SmartLinkBuilder.php';
+        require_once __DIR__ . '/../src/LinkBuilder.php';
+        require_once __DIR__ . '/../src/SmartLinkBuilder.php';
         $lb = new SmartLinkBuilder($config);
         if (!$lb->isEnabled()) {
             echo json_encode(['success' => false, 'message' => 'Link Building non abilitato.']);
@@ -832,8 +832,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'relink_wp_bulk') {
         header('Content-Type: application/json; charset=utf-8');
-        require_once __DIR__ . '/src/LinkBuilder.php';
-        require_once __DIR__ . '/src/SmartLinkBuilder.php';
+        require_once __DIR__ . '/../src/LinkBuilder.php';
+        require_once __DIR__ . '/../src/SmartLinkBuilder.php';
         $lb = new SmartLinkBuilder($config);
         if (!$lb->isEnabled()) {
             echo json_encode(['success' => false, 'message' => 'Link Building non abilitato.']);
@@ -988,8 +988,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'relink_wp_selected') {
         header('Content-Type: application/json; charset=utf-8');
-        require_once __DIR__ . '/src/LinkBuilder.php';
-        require_once __DIR__ . '/src/SmartLinkBuilder.php';
+        require_once __DIR__ . '/../src/LinkBuilder.php';
+        require_once __DIR__ . '/../src/SmartLinkBuilder.php';
         $lb = new SmartLinkBuilder($config);
         if (!$lb->isEnabled()) {
             echo json_encode(['success' => false, 'message' => 'Link Building non abilitato.']);

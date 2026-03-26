@@ -1,7 +1,7 @@
     <?php
     // Content Hub Manager
-    require_once __DIR__ . '/src/ContentHubManager.php';
-    require_once __DIR__ . '/src/MaxSEOGEOConfig.php';
+    require_once __DIR__ . '/../src/ContentHubManager.php';
+    require_once __DIR__ . '/../src/MaxSEOGEOConfig.php';
     
     $hub = new ContentHubManager(['base_dir' => __DIR__]);
     $hubReport = $hub->generateHubReport();

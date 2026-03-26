@@ -1,6 +1,6 @@
     <?php
     // Carica statistiche fact-check dal database
-    $fcDbPath = $config['db_path'] ?? __DIR__ . '/data/history.sqlite';
+    $fcDbPath = $config['db_path'] ?? __DIR__ . '/../data/history.sqlite';
     $fcDb = new PDO('sqlite:' . $fcDbPath);
     $fcDb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $fcDb->exec("

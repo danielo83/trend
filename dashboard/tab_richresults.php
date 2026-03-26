@@ -1,6 +1,6 @@
     <?php
     // Rich Results Generator
-    require_once __DIR__ . '/src/RichResultsGenerator.php';
+    require_once __DIR__ . '/../src/RichResultsGenerator.php';
     
     // Test schema markup
     $testArticle = [

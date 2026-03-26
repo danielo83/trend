@@ -1,9 +1,9 @@
     <?php
     // SEO Analytics Dashboard
-    require_once __DIR__ . '/src/SEOOptimizer.php';
-    require_once __DIR__ . '/src/ContentAnalytics.php';
-    require_once __DIR__ . '/src/SEOMonitor.php';
-    require_once __DIR__ . '/src/MaxSEOGEOConfig.php';
+    require_once __DIR__ . '/../src/SEOOptimizer.php';
+    require_once __DIR__ . '/../src/ContentAnalytics.php';
+    require_once __DIR__ . '/../src/SEOMonitor.php';
+    require_once __DIR__ . '/../src/MaxSEOGEOConfig.php';
     
     $analytics = new ContentAnalytics(['base_dir' => __DIR__]);
     $report = $analytics->generateReport();

@@ -1,6 +1,6 @@
     <?php
-    require_once __DIR__ . '/src/LinkBuilder.php';
-    require_once __DIR__ . '/src/SmartLinkBuilder.php';
+    require_once __DIR__ . '/../src/LinkBuilder.php';
+    require_once __DIR__ . '/../src/SmartLinkBuilder.php';
     $lb = new SmartLinkBuilder($config);
     $lbEnabled = $lb->isEnabled();
     $wpArticles = [];

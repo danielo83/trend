@@ -1,6 +1,6 @@
     <?php
     // Carica statistiche riscrittura dal database
-    $rwDbPath = $config['db_path'] ?? __DIR__ . '/data/history.sqlite';
+    $rwDbPath = $config['db_path'] ?? __DIR__ . '/../data/history.sqlite';
     $rwDb = new PDO('sqlite:' . $rwDbPath);
     $rwDb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $rwDb->exec("
