@@ -132,7 +132,13 @@ session_write_close();
 
 <div class="container">
     <h1>Esecuzione AutoPilot</h1>
-    <p class="subtitle">Output in tempo reale</p>
+    <p class="subtitle" id="runSubtitle">Output in tempo reale</p>
+    <script>
+    (function(){
+        var t = new URLSearchParams(window.location.search).get('custom_topic');
+        if (t) document.getElementById('runSubtitle').textContent = 'Topic custom: ' + t;
+    })();
+    </script>
 
     <div class="status-bar">
         <div class="status-dot" id="statusDot"></div>
@@ -311,7 +317,9 @@ session_write_close();
     // Questo evita che fetch() resti in attesa della fine dello script.
     var iframe = document.createElement('iframe');
     iframe.style.display = 'none';
-    iframe.src = 'run_stream.php?action=start&_t=' + Date.now();
+    var customTopic = new URLSearchParams(window.location.search).get('custom_topic') || '';
+    var customParam = customTopic ? '&custom_topic=' + encodeURIComponent(customTopic) : '';
+    iframe.src = 'run_stream.php?action=start' + customParam + '&_t=' + Date.now();
     document.body.appendChild(iframe);
 
     // Inizia il polling subito (il file progress viene creato immediatamente)

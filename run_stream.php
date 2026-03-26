@@ -171,6 +171,9 @@ if (!is_dir($logDir)) {
 
 // === ESECUZIONE ===
 
+// Topic custom passato da "Esegui Custom" (bypassa fasi 1 e 2)
+$customTopic = trim($_GET['custom_topic'] ?? '');
+
 try {
     logEvent('=== INIZIO ESECUZIONE ===', 'success');
 
@@ -199,6 +202,22 @@ try {
         logEvent('Modello OpenRouter: ' . ($config['openrouter_model'] ?? 'openai/gpt-4o-mini'), 'detail');
     }
 
+    // Inizializza sempre il filter (serve per markInProgress/markCompleted anche in modalità custom)
+    $dbDir = dirname($config['db_path']);
+    if (!is_dir($dbDir)) {
+        @mkdir($dbDir, 0755, true);
+    }
+    $filter = new TopicFilter($config);
+    $filter->setLogCallback(function(string $message, string $type) {
+        logEvent($message, $type);
+    });
+
+    // --- MODALITÀ CUSTOM (bypassa fasi 1 e 2) ---
+    if ($customTopic !== '') {
+        sectionEvent('ESECUZIONE CUSTOM');
+        logEvent('Topic specificato manualmente: ' . $customTopic, 'success');
+        $nuovi = [$customTopic];
+    } else {
     // --- FASE 1 ---
     $keywordSource = $config['keyword_source'] ?? 'google';
 
@@ -234,15 +253,6 @@ try {
         sectionEvent('FASE 2: Filtro Topic Nuovi');
         logEvent('Database path: ' . $config['db_path'], 'detail');
 
-        $dbDir = dirname($config['db_path']);
-        if (!is_dir($dbDir)) {
-            @mkdir($dbDir, 0755, true);
-        }
-
-        $filter = new TopicFilter($config);
-        $filter->setLogCallback(function(string $message, string $type) {
-            logEvent($message, $type);
-        });
         $nuovi = $filter->filter($suggerimenti);
         logEvent('Topic nuovi da elaborare: ' . count($nuovi), 'success');
 
@@ -257,6 +267,7 @@ try {
             logEvent('Nessun topic nuovo. Fine.', 'warning');
         }
     }
+    } // fine else modalità normale
 
     // --- FASE 3 ---
     if (!empty($nuovi)) {

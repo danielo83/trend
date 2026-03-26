@@ -1406,6 +1406,7 @@ $tab = $_GET['tab'] ?? 'overview';
         <h2>Panoramica</h2>
         <div>
             <a href="run.php" class="btn btn-success" style="margin-right:10px;">▶️ Esegui con Log</a>
+            <button type="button" class="btn" style="background:#7c3aed;color:#fff;margin-right:10px;" onclick="openCustomRun()">🎯 Esegui Custom</button>
             <form method="post" style="display:inline;">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                 <input type="hidden" name="action" value="run_now">
@@ -4621,7 +4622,40 @@ function fcResetLog() {
         .then(function(r) { return r.text(); })
         .then(function() { location.reload(); });
 }
+
+// --- Esegui Custom ---
+function openCustomRun() {
+    document.getElementById('customRunModal').style.display = 'flex';
+    document.getElementById('customTopicInput').focus();
+}
+function closeCustomRun() {
+    document.getElementById('customRunModal').style.display = 'none';
+    document.getElementById('customTopicInput').value = '';
+}
+function startCustomRun() {
+    var topic = document.getElementById('customTopicInput').value.trim();
+    if (!topic) { alert('Inserisci un topic.'); return; }
+    window.location.href = 'run.php?custom_topic=' + encodeURIComponent(topic);
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeCustomRun();
+});
 </script>
+
+<!-- Modal Esegui Custom -->
+<div id="customRunModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:32px;width:100%;max-width:500px;margin:20px;">
+        <h3 style="color:#818cf8;margin-bottom:8px;">🎯 Esegui Custom</h3>
+        <p style="color:#64748b;font-size:13px;margin-bottom:20px;">Specifica un topic unico per questa singola esecuzione. Le fasi 1 e 2 (keyword e filtro) vengono saltate.</p>
+        <input id="customTopicInput" type="text" placeholder="Es: significato sognare di volare"
+            style="width:100%;padding:12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:15px;margin-bottom:16px;"
+            onkeydown="if(event.key==='Enter') startCustomRun()">
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button type="button" class="btn btn-sm" style="background:#334155;color:#e2e8f0;" onclick="closeCustomRun()">Annulla</button>
+            <button type="button" class="btn btn-primary" onclick="startCustomRun()">▶️ Avvia</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
