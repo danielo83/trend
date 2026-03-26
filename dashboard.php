@@ -1346,34 +1346,49 @@ $tab = $_GET['tab'] ?? 'overview';
             .mobile-topbar { display: flex; }
             .sidebar {
                 transform: translateX(-100%);
+                width: min(240px, 85vw);
             }
             .sidebar.open {
                 transform: translateX(0);
             }
+            /* Touch targets sidebar: minimo 44px (Apple HIG) */
+            .sidebar a { padding: 13px 20px; font-size: 15px; }
             .main {
                 margin-left: 0;
-                padding: 70px 14px 24px;
+                padding: 70px 14px 32px;
             }
             .header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 20px; }
             .header h2 { font-size: 20px; }
             .header > div { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
-            .header > div .btn { flex: 1 1 auto; text-align: center; margin-right: 0 !important; }
+            .header > div .btn { flex: 1 1 auto; text-align: center; margin-right: 0 !important; min-height: 44px; display: flex; align-items: center; justify-content: center; }
             .header > div form { flex: 1 1 auto; display: flex; }
             .header > div form .btn { width: 100%; }
-            .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
-            .stat-card { padding: 14px; }
-            .stat-card .value { font-size: 24px; }
-            .stat-card .label { font-size: 11px; }
+            /* Stat cards: 3 colonne su mobile per numeri più compatti */
+            .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+            .stat-card { padding: 12px 8px; text-align: center; }
+            .stat-card .value { font-size: 22px; }
+            .stat-card .label { font-size: 10px; }
             .card { padding: 16px; border-radius: 10px; }
             .card h3 { font-size: 15px; }
+            /* Prevenire zoom iOS su tutti gli input */
+            input[type="text"], input[type="number"], input[type="password"], textarea, select { font-size: 16px !important; }
             table { font-size: 13px; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
             th, td { padding: 8px; white-space: nowrap; }
-            .btn { padding: 10px 16px; font-size: 13px; }
-            .btn-sm { padding: 8px 12px; }
+            .btn { padding: 10px 16px; font-size: 13px; min-height: 44px; }
+            .btn-sm { padding: 8px 12px; min-height: 36px; }
             .feed-item .actions { display: flex; flex-wrap: wrap; gap: 6px; }
             /* cfg-tabs: scrollabili orizzontalmente su mobile */
             .cfg-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 6px; gap: 6px; }
-            .cfg-tab { white-space: nowrap; font-size: 13px; padding: 8px 12px; flex-shrink: 0; }
+            .cfg-tab { white-space: nowrap; font-size: 13px; padding: 10px 14px; flex-shrink: 0; min-height: 44px; }
+            /* Message banner leggibile su mobile */
+            .message { font-size: 13px; padding: 10px 14px; }
+        }
+
+        /* Schermi molto piccoli (< 390px) */
+        @media (max-width: 390px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .stat-card .value { font-size: 20px; }
+            .main { padding: 66px 10px 28px; }
         }
     </style>
 </head>
@@ -4662,16 +4677,16 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 <!-- Modal Esegui Custom -->
-<div id="customRunModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
-    <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:32px;width:100%;max-width:500px;margin:20px;">
+<div id="customRunModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;width:100%;max-width:500px;">
         <h3 style="color:#818cf8;margin-bottom:8px;">🎯 Esegui Custom</h3>
         <p style="color:#64748b;font-size:13px;margin-bottom:20px;">Specifica un topic unico per questa singola esecuzione. Le fasi 1 e 2 (keyword e filtro) vengono saltate.</p>
         <input id="customTopicInput" type="text" placeholder="Es: significato sognare di volare"
             style="width:100%;padding:12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:16px;margin-bottom:16px;"
             onkeydown="if(event.key==='Enter') startCustomRun()">
-        <div style="display:flex;gap:10px;justify-content:flex-end;">
-            <button type="button" class="btn btn-sm" style="background:#334155;color:#e2e8f0;" onclick="closeCustomRun()">Annulla</button>
-            <button type="button" class="btn btn-primary" onclick="startCustomRun()">▶️ Avvia</button>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm" style="background:#334155;color:#e2e8f0;min-height:44px;" onclick="closeCustomRun()">Annulla</button>
+            <button type="button" class="btn btn-primary" style="min-height:44px;" onclick="startCustomRun()">▶️ Avvia</button>
         </div>
     </div>
 </div>
