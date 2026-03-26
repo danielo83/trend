@@ -1,0 +1,7 @@
+.env
+data/history.sqlite
+data/*.jsonl
+data/cache_*.json
+data/images/
+logs/
+error_log
