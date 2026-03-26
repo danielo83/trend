@@ -5,7 +5,56 @@
  * Pagina di lettura articoli generati dal feed RSS
  */
 
+// --- Protezione con password ---
+session_start();
+
 $config = require __DIR__ . '/config.php';
+
+$dashboardHash = $config['dashboard_password_hash'] ?? EnvLoader::get('DASHBOARD_PASSWORD');
+
+if (empty($_SESSION['index_auth'])) {
+    if (isset($_POST['index_password']) && password_verify($_POST['index_password'], $dashboardHash)) {
+        $_SESSION['index_auth'] = true;
+        session_regenerate_id(true);
+        header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+        exit;
+    }
+    ?><!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accesso richiesto</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .login-box { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; }
+        .login-box h1 { font-size: 22px; color: #818cf8; margin-bottom: 8px; }
+        .login-box p { font-size: 14px; color: #64748b; margin-bottom: 24px; }
+        .login-box input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 16px; margin-bottom: 16px; }
+        .login-box input:focus { outline: none; border-color: #818cf8; }
+        .login-box button { width: 100%; padding: 12px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .login-box button:hover { background: #4f46e5; }
+        .error { color: #fca5a5; font-size: 13px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>AutoPilot</h1>
+        <p>Accesso richiesto</p>
+        <?php if (isset($_POST['index_password'])): ?>
+            <div class="error">Password non valida.</div>
+        <?php endif; ?>
+        <form method="post">
+            <input type="password" name="index_password" placeholder="Password" autofocus required>
+            <button type="submit">Accedi</button>
+        </form>
+    </div>
+</body>
+</html><?php
+    exit;
+}
+
 require __DIR__ . '/src/RSSFeedBuilder.php';
 
 $feedBuilder = new RSSFeedBuilder($config);
