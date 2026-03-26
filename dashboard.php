@@ -1696,9 +1696,29 @@ $tab = $_GET['tab'] ?? 'overview';
         <h2>Configurazione</h2>
     </div>
 
+    <style>
+        .cfg-tabs { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
+        .cfg-tab { padding:8px 18px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#94a3b8; font-size:14px; font-weight:500; cursor:pointer; transition:all .15s; }
+        .cfg-tab:hover { border-color:#818cf8; color:#c7d2fe; }
+        .cfg-tab.active { background:#4f46e5; border-color:#4f46e5; color:#fff; }
+        .cfg-panel { display:none; }
+        .cfg-panel.active { display:block; }
+    </style>
+
+    <div class="cfg-tabs">
+        <button type="button" class="cfg-tab active" onclick="showCfgTab('ai')">🤖 AI &amp; Provider</button>
+        <button type="button" class="cfg-tab" onclick="showCfgTab('contenuto')">📝 Contenuto</button>
+        <button type="button" class="cfg-tab" onclick="showCfgTab('immagini')">🖼️ Immagini</button>
+        <button type="button" class="cfg-tab" onclick="showCfgTab('pubblicazione')">🚀 Pubblicazione &amp; SEO</button>
+        <button type="button" class="cfg-tab" onclick="showCfgTab('prompt')">💬 Prompt AI</button>
+    </div>
+
     <form method="post">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
         <input type="hidden" name="action" value="save_config">
+
+        <!-- TAB: AI & Provider -->
+        <div class="cfg-panel active" id="cfg-ai">
 
         <div class="card">
             <h3>API Keys</h3>
@@ -1754,6 +1774,12 @@ $tab = $_GET['tab'] ?? 'overview';
                 <div class="form-group"></div>
             </div>
         </div>
+
+        <button type="submit" class="btn btn-primary">Salva Configurazione</button>
+        </div><!-- /cfg-ai -->
+
+        <!-- TAB: Contenuto -->
+        <div class="cfg-panel" id="cfg-contenuto">
 
         <div class="card">
             <h3>Nicchia / Argomento</h3>
@@ -1812,6 +1838,12 @@ $tab = $_GET['tab'] ?? 'overview';
                 </div>
             </div>
         </div>
+
+        <button type="submit" class="btn btn-primary">Salva Configurazione</button>
+        </div><!-- /cfg-contenuto -->
+
+        <!-- TAB: Immagini -->
+        <div class="cfg-panel" id="cfg-immagini">
 
         <div class="card">
             <h3>Generazione Immagini (fal.ai)</h3>
@@ -1951,6 +1983,12 @@ $tab = $_GET['tab'] ?? 'overview';
                 <textarea name="fal_inline_prompt_template" rows="4" style="font-size:12px; line-height:1.5;"><?= htmlspecialchars($config['fal_inline_prompt_template'] ?? ImageGenerator::defaultInlinePrompt()) ?></textarea>
             </div>
         </div>
+
+        <button type="submit" class="btn btn-primary">Salva Configurazione</button>
+        </div><!-- /cfg-immagini -->
+
+        <!-- TAB: Pubblicazione & SEO -->
+        <div class="cfg-panel" id="cfg-pubblicazione">
 
         <div class="card">
             <h3>Feed Social Media (Auto-posting)</h3>
@@ -2159,6 +2197,12 @@ $tab = $_GET['tab'] ?? 'overview';
             </div>
         </div>
 
+        <button type="submit" class="btn btn-primary">Salva Configurazione</button>
+        </div><!-- /cfg-pubblicazione -->
+
+        <!-- TAB: Prompt AI -->
+        <div class="cfg-panel" id="cfg-prompt">
+
         <div class="card">
             <h3>Prompt Generazione Titolo (SEO / GEO / Google Discover)</h3>
             <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Il titolo viene <strong>sempre</strong> rigenerato con una chiamata AI dedicata dopo la creazione dell'articolo, ottimizzato per SEO, GEO e Google Discover. Personalizza il prompt qui sotto oppure lascia vuoto per usare quello di default.</p>
@@ -2179,6 +2223,8 @@ $tab = $_GET['tab'] ?? 'overview';
         </div>
 
         <button type="submit" class="btn btn-primary">Salva Configurazione</button>
+        </div><!-- /cfg-prompt -->
+
     </form>
 
 <?php elseif ($tab === 'logs'): ?>
@@ -3434,6 +3480,15 @@ $tab = $_GET['tab'] ?? 'overview';
 </div>
 
 <script>
+// --- Config sub-tabs ---
+function showCfgTab(name) {
+    document.querySelectorAll('.cfg-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.cfg-tab').forEach(function(t) { t.classList.remove('active'); });
+    var panel = document.getElementById('cfg-' + name);
+    if (panel) panel.classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
 // --- Keyword source toggle ---
 function toggleKeywordSource() {
     var source = document.getElementById('keyword_source').value;
