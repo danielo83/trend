@@ -185,6 +185,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             EnvLoader::set('FAL_API_KEY', $newFalKey);
         }
 
+        $newCronToken = trim($_POST['cron_token'] ?? '');
+        if (!empty($newCronToken) && !str_contains($newCronToken, '***')) {
+            EnvLoader::set('CRON_TOKEN', $newCronToken);
+        }
+
         $newWpAppPassword = trim($_POST['wp_app_password'] ?? '');
         if (!empty($newWpAppPassword) && !str_contains($newWpAppPassword, '***')) {
             EnvLoader::set('WP_APP_PASSWORD', $newWpAppPassword);
@@ -1352,6 +1357,9 @@ $tab = $_GET['tab'] ?? 'overview';
             .header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 20px; }
             .header h2 { font-size: 20px; }
             .header > div { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+            .header > div .btn { flex: 1 1 auto; text-align: center; margin-right: 0 !important; }
+            .header > div form { flex: 1 1 auto; display: flex; }
+            .header > div form .btn { width: 100%; }
             .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
             .stat-card { padding: 14px; }
             .stat-card .value { font-size: 24px; }
@@ -1363,6 +1371,9 @@ $tab = $_GET['tab'] ?? 'overview';
             .btn { padding: 10px 16px; font-size: 13px; }
             .btn-sm { padding: 8px 12px; }
             .feed-item .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+            /* cfg-tabs: scrollabili orizzontalmente su mobile */
+            .cfg-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 6px; gap: 6px; }
+            .cfg-tab { white-space: nowrap; font-size: 13px; padding: 8px 12px; flex-shrink: 0; }
         }
     </style>
 </head>
@@ -1746,6 +1757,14 @@ $tab = $_GET['tab'] ?? 'overview';
                     <div class="hint">Ottienila da <strong>fal.ai/dashboard/keys</strong></div>
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Cron Token (sicurezza cron URL) - Attuale: <?= maskKey(EnvLoader::get('CRON_TOKEN')) ?></label>
+                    <input type="password" name="cron_token" value="" placeholder="Inserisci token per aggiornare...">
+                    <div class="hint">Token segreto per chiamare <strong>cron.php?token=...</strong> via URL. Usalo per hosting che supportano cron via HTTP (es. cPanel, Plesk).</div>
+                </div>
+            </div>
+
             <div class="form-group" style="margin-bottom:20px;">
                 <label>Provider predefinito per generazione articoli</label>
                 <select name="default_provider" style="max-width:400px;">
@@ -4648,7 +4667,7 @@ document.addEventListener('keydown', function(e) {
         <h3 style="color:#818cf8;margin-bottom:8px;">🎯 Esegui Custom</h3>
         <p style="color:#64748b;font-size:13px;margin-bottom:20px;">Specifica un topic unico per questa singola esecuzione. Le fasi 1 e 2 (keyword e filtro) vengono saltate.</p>
         <input id="customTopicInput" type="text" placeholder="Es: significato sognare di volare"
-            style="width:100%;padding:12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:15px;margin-bottom:16px;"
+            style="width:100%;padding:12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:16px;margin-bottom:16px;"
             onkeydown="if(event.key==='Enter') startCustomRun()">
         <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button type="button" class="btn btn-sm" style="background:#334155;color:#e2e8f0;" onclick="closeCustomRun()">Annulla</button>
