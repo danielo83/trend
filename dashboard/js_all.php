@@ -1249,12 +1249,14 @@ document.addEventListener('keydown', function(e) {
     </div>
 </div>
 
+<script>
 // Inizializza banner errori factcheck nel tab rewrite
 (function() {
     if (document.getElementById('rwFcErrorBanner')) {
         rwInitFcBanner();
     }
 })();
+</script>
 
 </body>
 </html>
