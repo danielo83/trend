@@ -358,8 +358,8 @@
             <?php if (!empty($config['social_feeds_enabled'])): ?>
             <div style="margin-top:15px;padding:10px;background:#0f172a;border-radius:8px;">
                 <strong style="color:#818cf8;">Feed disponibili:</strong><br>
-                <a href="data/feed-facebook.xml" target="_blank" style="color:#60a5fa;">📘 Feed Facebook</a><br>
-                <a href="data/feed-twitter.xml" target="_blank" style="color:#60a5fa;">🐦 Feed X/Twitter</a>
+                <a href="feed-facebook.php" target="_blank" style="color:#60a5fa;">📘 Feed Facebook</a><br>
+                <a href="feed-twitter.php" target="_blank" style="color:#60a5fa;">🐦 Feed X/Twitter</a>
             </div>
             <?php endif; ?>
         </div>
