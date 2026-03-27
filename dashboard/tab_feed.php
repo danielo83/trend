@@ -2,7 +2,7 @@
         <h2>Gestione Feed RSS</h2>
         <div>
             <?php if (file_exists($config['feed_path'])): ?>
-                <a href="data/feed.xml" target="_blank" class="btn btn-primary btn-sm">Apri Feed XML</a>
+                <a href="feed.php" target="_blank" class="btn btn-primary btn-sm">Apri Feed XML</a>
             <?php endif; ?>
         </div>
     </div>

@@ -92,7 +92,7 @@ if (isset($_GET['article'])) {
         <title><?= htmlspecialchars($siteName) ?></title>
         <meta name="description" content="<?= htmlspecialchars($siteDesc) ?>">
     <?php endif; ?>
-    <link rel="alternate" type="application/rss+xml" title="<?= htmlspecialchars($siteName) ?> RSS" href="data/feed.xml">
+    <link rel="alternate" type="application/rss+xml" title="<?= htmlspecialchars($siteName) ?> RSS" href="feed.php">
     <style>
         :root {
             --bg: #fafafa;
@@ -452,7 +452,7 @@ if (isset($_GET['article'])) {
         <?php if ($siteDesc): ?>
             <p><?= htmlspecialchars($siteDesc) ?></p>
         <?php endif; ?>
-        <a href="data/feed.xml" class="rss-link">
+        <a href="feed.php" class="rss-link">
             <svg class="rss-icon" viewBox="0 0 24 24"><circle cx="6.18" cy="17.82" r="2.18"/><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56z"/><path d="M4 10.1v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"/></svg>
             Feed RSS
         </a>
