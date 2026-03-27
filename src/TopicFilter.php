@@ -28,6 +28,12 @@ class TopicFilter
     /** @var callable|null */
     private $logCallback = null;
 
+    // Configurazione WordPress per fetch diretto dei post pubblicati
+    private string $wpSiteUrl;
+    private string $wpUsername;
+    private string $wpAppPassword;
+    private int $wpCacheTtl;
+
     // Prefissi da strippare (ordine: dal piu' lungo al piu' corto per evitare match parziali)
     private const STRIP_PREFIXES = [
         // Sogni - varianti lunghe prima
@@ -86,9 +92,18 @@ class TopicFilter
         $this->openaiKey = $config['openai_api_key'] ?? '';
         $this->embeddingSimilarityThreshold = floatval($config['embedding_similarity_threshold'] ?? 0.85);
         $this->embeddingCachePath = ($config['base_dir'] ?? __DIR__ . '/..') . '/data/cache_embeddings.json';
+        $this->wpSiteUrl = rtrim($config['wp_site_url'] ?? '', '/');
+        $this->wpUsername = $config['wp_username'] ?? '';
+        $this->wpAppPassword = $config['wp_app_password'] ?? '';
+        $this->wpCacheTtl = max(1800, intval($config['link_cache_ttl'] ?? 21600));
         $this->db = new PDO('sqlite:' . $config['db_path']);
         $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->initDb();
+        // Aggiorna la cache WP prima di caricare i concetti esistenti,
+        // per includere anche i post scritti manualmente sul sito WordPress.
+        if (!$this->isWpCacheValid() && $this->isWpConfigured()) {
+            $this->syncWpPostsToCache();
+        }
         $this->loadExistingConcepts();
         if ($this->embeddingEnabled) {
             $this->loadEmbeddingCache();
@@ -559,6 +574,134 @@ class TopicFilter
         }
 
         return null;
+    }
+
+    /**
+     * Verifica se WordPress e' configurato (credenziali presenti).
+     */
+    private function isWpConfigured(): bool
+    {
+        return !empty($this->wpSiteUrl) && !empty($this->wpUsername) && !empty($this->wpAppPassword);
+    }
+
+    /**
+     * Verifica se la cache locale dei post WP e' ancora valida (non scaduta).
+     */
+    private function isWpCacheValid(): bool
+    {
+        if (!file_exists($this->wpCachePath)) {
+            return false;
+        }
+        $data = json_decode(@file_get_contents($this->wpCachePath), true);
+        if (!is_array($data) || !isset($data['fetched_at'])) {
+            return false;
+        }
+        return (time() - $data['fetched_at']) < $this->wpCacheTtl;
+    }
+
+    /**
+     * Recupera tutti i post pubblicati da WordPress via REST API e li salva in cache.
+     * Include sia gli articoli generati automaticamente che quelli scritti manualmente.
+     *
+     * @return int Numero di post recuperati (0 se fallisce o WP non configurato)
+     */
+    public function syncWpPostsToCache(): int
+    {
+        if (!$this->isWpConfigured()) {
+            $this->log('WordPress non configurato, skip sincronizzazione post', 'warning');
+            return 0;
+        }
+
+        $this->log('Sincronizzazione post WordPress per rilevamento duplicati...', 'detail');
+
+        $allPosts = [];
+        $page = 1;
+        $perPage = 100;
+        $auth = base64_encode($this->wpUsername . ':' . $this->wpAppPassword);
+
+        while (true) {
+            $params = http_build_query([
+                'per_page' => $perPage,
+                'page'     => $page,
+                'status'   => 'publish',
+                '_fields'  => 'id,title,link,slug',
+                'orderby'  => 'id',
+                'order'    => 'asc',
+            ]);
+
+            $url = $this->wpSiteUrl . '/wp-json/wp/v2/posts?' . $params;
+
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL            => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 20,
+                CURLOPT_HTTPHEADER     => [
+                    'Authorization: Basic ' . $auth,
+                    'Accept: application/json',
+                ],
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($response === false || $httpCode !== 200) {
+                $this->log("Fetch WP fallito (HTTP {$httpCode}), uso cache esistente", 'warning');
+                return 0;
+            }
+
+            $posts = json_decode($response, true);
+            if (!is_array($posts) || empty($posts)) {
+                break;
+            }
+
+            foreach ($posts as $post) {
+                $allPosts[] = [
+                    'id'    => $post['id'],
+                    'title' => strip_tags(html_entity_decode($post['title']['rendered'] ?? '', ENT_QUOTES, 'UTF-8')),
+                    'url'   => $post['link'] ?? '',
+                    'slug'  => $post['slug'] ?? '',
+                ];
+            }
+
+            if (count($posts) < $perPage) {
+                break;
+            }
+
+            $page++;
+            if ($page > 50) {
+                break; // Safety: max 5000 post
+            }
+        }
+
+        if (!empty($allPosts)) {
+            $data = ['fetched_at' => time(), 'posts' => $allPosts];
+            @file_put_contents($this->wpCachePath, json_encode($data, JSON_UNESCAPED_UNICODE), LOCK_EX);
+            $this->log('Cache WP aggiornata: ' . count($allPosts) . ' post (inclusi quelli scritti manualmente)', 'detail');
+        }
+
+        return count($allPosts);
+    }
+
+    /**
+     * Restituisce informazioni sulla cache WP per il dashboard.
+     */
+    public function getWpCacheInfo(): array
+    {
+        $configured = $this->isWpConfigured();
+
+        if (!file_exists($this->wpCachePath)) {
+            return ['count' => 0, 'fetched_at' => null, 'valid' => false, 'configured' => $configured];
+        }
+
+        $data = json_decode(@file_get_contents($this->wpCachePath), true);
+        return [
+            'count'      => count($data['posts'] ?? []),
+            'fetched_at' => $data['fetched_at'] ?? null,
+            'valid'      => $this->isWpCacheValid(),
+            'configured' => $configured,
+        ];
     }
 
     /**

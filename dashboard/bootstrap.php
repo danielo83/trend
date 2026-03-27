@@ -148,6 +148,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'refresh_rw_cache') {
     exit;
 }
 
+if (isset($_GET['action']) && $_GET['action'] === 'refresh_wp_topics_cache') {
+    $postedCsrf = $_GET['csrf_token'] ?? '';
+    if (hash_equals($csrfToken, $postedCsrf)) {
+        $tf = new TopicFilter($config);
+        $count = $tf->syncWpPostsToCache();
+        echo 'OK:' . $count;
+    } else {
+        echo 'CSRF error';
+    }
+    exit;
+}
+
 // --- Gestione azioni POST ---
 $message = '';
 $messageType = 'info';
